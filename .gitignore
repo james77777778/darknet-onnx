@@ -1,0 +1,15 @@
+# cache
+__pycache__
+
+# venv
+venv
+
+# cfg
+cfg/yolov3-obj.cfg
+cfg/yolov4-obj.cfg
+
+# weights
+weights/*.*
+
+# output model
+*.onnx
