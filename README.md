@@ -17,7 +17,10 @@ Use `data/dog.jpg` as the example:
         truck: 92%    (left_x:  463   top_y:  76      width:  221     height:  93)
         pottedplant: 33%        (left_x:  681   top_y:  109     width:  36      height:  45)
         ```
-    darknet <img src="docs/results/darknet_yolov4_predictions.jpg" alt="drawing" width="350"/> darknetonnx <img src="docs/results/onnx_yolov4_predictions.jpg" alt="drawing" width="350"/>
+    |Framework|Image|
+    |-|-|
+    |darknet|<img src="docs/results/darknet_yolov4_predictions.jpg" alt="drawing" width="75%"/>|  
+    |darknetonnx|<img src="docs/results/onnx_yolov4_predictions.jpg" alt="drawing" width="75%"/>|
 2. YOLOv3 (Darknet vs. DarknetONNX)
     - Darknet
         ```bash
