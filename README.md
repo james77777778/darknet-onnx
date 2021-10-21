@@ -73,3 +73,8 @@ https://github.com/pjreddie/darknet/issues/558#issuecomment-376041045
 ### Decode Parts in Different Version of YOLO Models
 YOLO Layer:
 https://github.com/WongKinYiu/ScaledYOLOv4/issues/202#issuecomment-810913378
+
+## Credit
+https://github.com/AlexeyAB/darknet
+https://github.com/Tianxiaomo/pytorch-YOLOv4
+https://github.com/Megvii-BaseDetection/YOLOX
