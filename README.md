@@ -10,7 +10,6 @@ Use `data/dog.jpg` as the example:
         truck: 92%      (left_x:  464   top_y:   77     width:  221     height:   93)
         pottedplant: 33%        (left_x:  681   top_y:  109     width:   37     height:  45)
         ```
-        ![](docs/results/darknet_yolov4_predictions.jpg)
     - DarknetONNX
         ```bash
         bicycle: 92%  (left_x:  114   top_y:  127     width:  458     height:  299)
@@ -18,7 +17,7 @@ Use `data/dog.jpg` as the example:
         truck: 92%    (left_x:  463   top_y:  76      width:  221     height:  93)
         pottedplant: 33%        (left_x:  681   top_y:  109     width:  36      height:  45)
         ```
-        ![](docs/results/onnx_yolov4_predictions.jpg)
+    darknet <img src="docs/results/darknet_yolov4_predictions.jpg" alt="drawing" width="350"/> darknetonnx <img src="docs/results/onnx_yolov4_predictions.jpg" alt="drawing" width="350"/>
 2. YOLOv3 (Darknet vs. DarknetONNX)
     - Darknet
         ```bash
