@@ -75,6 +75,6 @@ YOLO Layer:
 https://github.com/WongKinYiu/ScaledYOLOv4/issues/202#issuecomment-810913378
 
 ## Credit
-- https://github.com/AlexeyAB/darknet
-- https://github.com/Tianxiaomo/pytorch-YOLOv4
-- https://github.com/Megvii-BaseDetection/YOLOX
+https://github.com/AlexeyAB/darknet
+https://github.com/Tianxiaomo/pytorch-YOLOv4
+https://github.com/Megvii-BaseDetection/YOLOX
