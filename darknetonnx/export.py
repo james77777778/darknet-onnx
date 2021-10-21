@@ -5,7 +5,7 @@ from onnxsim import simplify
 from darknetonnx.darknet import Darknet
 
 
-def transform_to_onnx(cfgfile, weightfile, outputfile, batch_size=1):
+def export_to_onnx(cfgfile, weightfile, outputfile, batch_size=1):
     # Load model
     model = Darknet(cfgfile)
     model.load_weights(weightfile)
@@ -35,8 +35,7 @@ def transform_to_onnx(cfgfile, weightfile, outputfile, batch_size=1):
     )
     # ONNX simplifier
     onnx_model = onnx.load(outputfile)
-    if dynamic:
-        input_shapes = {input_names[0]: list(x.shape)}
+    input_shapes = {input_names[0]: list(x.shape)} if dynamic else None
     model_simp, check = simplify(
         onnx_model, dynamic_input_shape=dynamic, input_shapes=input_shapes
     )

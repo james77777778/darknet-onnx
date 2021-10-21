@@ -39,7 +39,7 @@ def yolo_forward_dynamic(output, num_classes, anchors, num_anchors, scale_x_y, v
     # Adopt different decoding method based on
     # https://github.com/WongKinYiu/ScaledYOLOv4/issues/202#issuecomment-810913378
     if version == "yolov4" or version == "yolov3":
-        bxy = torch.sigmoid(bxy) * scale_x_y - 0.5 * (scale_x_y - 1)
+        bxy = torch.sigmoid(bxy) * scale_x_y - 0.5 * (scale_x_y - 1.0)
         bwh = torch.exp(bwh)
         det_confs = torch.sigmoid(det_confs)
         cls_confs = torch.sigmoid(cls_confs)
@@ -71,9 +71,9 @@ def yolo_forward_dynamic(output, num_classes, anchors, num_anchors, scale_x_y, v
     for i in range(num_anchors):
         ii = i * 2
         # Shape: [batch, 1, H, W]
-        bx = bxy[:, ii: ii + 1] + torch.tensor(grid_x, device=device, dtype=torch.float32)
+        bx = bxy[:, ii: ii + 1] + torch.FloatTensor(grid_x).to(device)
         # Shape: [batch, 1, H, W]
-        by = bxy[:, ii + 1: ii + 2] + torch.tensor(grid_y, device=device, dtype=torch.float32)
+        by = bxy[:, ii + 1: ii + 2] + torch.FloatTensor(grid_y).to(device)
         # Shape: [batch, 1, H, W]
         bw = bwh[:, ii: ii + 1] * anchor_w[i]
         # Shape: [batch, 1, H, W]
