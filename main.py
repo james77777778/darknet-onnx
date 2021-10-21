@@ -16,19 +16,20 @@ INFERENCE_STEPS = 1  # 30
 
 
 def detect(session, image_path, score_thresh=0.1, nms_thresh=0.45):
+    # preprocess
+    t1 = time.time()
     IN_IMAGE_H = session.get_inputs()[0].shape[2]
     IN_IMAGE_W = session.get_inputs()[0].shape[3]
-    t1 = time.time()
     image_src = cv2.imread(image_path)
     resized = cv2.resize(image_src, (IN_IMAGE_W, IN_IMAGE_H), interpolation=cv2.INTER_LINEAR)
     img_in = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
     img_in = np.transpose(img_in, (2, 0, 1)).astype(np.float32)  # HWC to CHW
     img_in /= 255.0
     img_in = np.expand_dims(img_in, axis=0)
-    t2 = time.time()
 
-    input_name = session.get_inputs()[0].name
     # warm-up
+    t2 = time.time()
+    input_name = session.get_inputs()[0].name
     for _ in range(WARMUP_STEPS):
         _ = session.run(None, {input_name: img_in})  # output = [[batch, num, 4 + num_classes]]
 
@@ -36,11 +37,13 @@ def detect(session, image_path, score_thresh=0.1, nms_thresh=0.45):
     t3 = time.time()
     for _ in range(INFERENCE_STEPS):
         outputs = session.run(None, {input_name: img_in})  # output = [[batch, num, 4 + num_classes]]
+
+    # postprocess
     t4 = time.time()
     final_boxes, final_scores, final_cls_inds = get_detections(outputs[0][0], score_thresh, nms_thresh)
     t5 = time.time()
 
-    # analysis
+    # time analysis
     print("Preprocessing : {:.4f}s".format(t2 - t1))
     print("Inference     : {:.4f}s".format((t4 - t3) / INFERENCE_STEPS))
     print("Postprocessing: {:.4f}s".format(t5 - t4))
