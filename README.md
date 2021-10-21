@@ -78,7 +78,7 @@ Use `data/dog.jpg` as the example:
         truck: 81%      (left_x:  464   top_y:  79      width:  240     height:  91)
         car: 39%        (left_x:  472   top_y:  81      width:  225     height:  92)
         ```
-More visualizations can be found at `docs/results/`.
+More visualizations can be found at [docs/results/README.md](docs/results/README.md).
 
 ## Installation
 - torch 1.9.1
