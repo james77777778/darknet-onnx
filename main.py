@@ -11,7 +11,7 @@ from utils import vis
 
 
 # Use more steps to get more stable inference speed measurement
-WARMUP_STEPS = 1  # 30
+WARMUP_STEPS = 0  # 30
 INFERENCE_STEPS = 1  # 30
 
 
