@@ -2,7 +2,7 @@ import torch
 import onnx
 from onnxsim import simplify
 
-from darknetonnx.darknet import Darknet
+from .darknet import Darknet
 
 
 def export_to_onnx(cfgfile, weightfile, outputfile, batch_size=1):
