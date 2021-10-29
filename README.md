@@ -89,12 +89,18 @@ More visualizations & Inference speed comparison can be found at [docs/results/C
 - onnx-simplifier
 
 ## Usage
+Must specify `--cfg` (`-c`), `--weight` (`-w`) and `--img` (`-i`) for the model conversion.
 ```bash
 # darknet cfg & weights
 python3 main.py --cfg cfg/yolov4.cfg --weight weights/yolov4.weights --img data/dog.jpg --names data/coco.names
 python3 main.py --cfg cfg/yolov3.cfg --weight weights/yolov3.weights --img data/dog.jpg --names data/coco.names
 python3 main.py --cfg cfg/yolov4-csp.cfg --weight weights/yolov4-csp.weights --img data/dog.jpg --names data/coco.names
+# some custom cfg & weights
+python3 main.py --cfg cfg/yolov4-obj.cfg --weight weights/yolov4-obj.weights --img your/img.jpg --names data/coco.names
+# show only index if not specify `--names`
+python3 main.py --cfg cfg/yolov4.cfg --weight weights/yolov4.weights --img data/dog.jpg
 ```
+The script outputs `model.onnx` and `onnx_predictions.jpg`.
 
 ## YOLO Spec.
 ### `mask` in `[yolo]`

@@ -15,6 +15,20 @@ WARMUP_STEPS = 0  # 30
 INFERENCE_STEPS = 1  # 30
 
 
+def get_parser():
+    parser = argparse.ArgumentParser(description="Darknet to ONNX")
+    parser.add_argument("--cfg", "-c", type=str, required=True, help="Specify the darknet .cfg file.")
+    parser.add_argument("--weight", "-w", type=str, required=True, help="Specify the darknet .weights file.")
+    parser.add_argument("--img", "-i", type=str, required=True, help="Specify the 3 channels image file (.jpg/.jpeg/.png...) for visualization.")
+    parser.add_argument("--batch-size", "-b", default=1, type=int, help="If batch size > 0, ONNX model will be static. If batch size <= 0, ONNX model will be dynamic.")
+    parser.add_argument("--score", default=0.3, type=float)
+    parser.add_argument("--nms", default=0.45, type=float)
+    parser.add_argument("--names", "-n", default="", type=str)
+    parser.add_argument("--out", "-o", default="model.onnx")
+    parser.add_argument("--no_export", action="store_true")
+    return parser
+
+
 def detect(session, image_path, score_thresh=0.1, nms_thresh=0.45):
     # preprocess
     t1 = time.time()
@@ -82,16 +96,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Darknet to ONNX")
-    parser.add_argument("--cfg", "-c", type=str)
-    parser.add_argument("--weight", "-w", type=str)
-    parser.add_argument("--batch-size", "-b", default=1, type=int, help="If batch size > 0, ONNX model will be static. If batch size <= 0, ONNX model will be dynamic")
-    parser.add_argument("--score", default=0.3, type=float)
-    parser.add_argument("--nms", default=0.45, type=float)
-    parser.add_argument("--img", "-i", type=str)
-    parser.add_argument("--names", "-n", default="", type=str)
-    parser.add_argument("--out", "-o", default="model.onnx")
-    parser.add_argument("--no_export", action="store_true")
+    parser = get_parser()
     args = parser.parse_args()
     for k, v in vars(args).items():
         print("{}: {}".format(k, v))

@@ -101,6 +101,10 @@ def vis(image_path, boxes, scores, cls_ids, conf=0.5, class_names=None, out_img=
     sorted_bcs = sorted(zip(boxes, cls_ids, scores), key=lambda zipped: zipped[0][0])  # zipped[0][0]: x0 of box
     for box, cls_id, score in sorted_bcs:
         cls_id = int(cls_id)
+        if class_names is None:
+            label = cls_id
+        else:
+            label = class_names[cls_id]
         if score < conf:
             continue
         x0 = int(box[0] * width)
@@ -108,7 +112,7 @@ def vis(image_path, boxes, scores, cls_ids, conf=0.5, class_names=None, out_img=
         x1 = int(box[2] * width)
         y1 = int(box[3] * height)
         color = (_COLORS[cls_id] * 255).astype(np.uint8).tolist()
-        text = '{}: {:.2f}'.format(class_names[cls_id], score)
+        text = '{}: {:.2f}'.format(label, score)
         txt_color = (0, 0, 0) if np.mean(_COLORS[cls_id]) > 0.5 else (255, 255, 255)
         font = cv2.FONT_HERSHEY_SIMPLEX
         txt_size = cv2.getTextSize(text, font, 0.6, 1)[0]
@@ -124,7 +128,7 @@ def vis(image_path, boxes, scores, cls_ids, conf=0.5, class_names=None, out_img=
         cv2.putText(img, text, (x0, y0 - int(0.5 * txt_size[1])), font, 0.6, txt_color, thickness=1)
         if print_bbox:
             print("{0}: {1:.0f}%\t(left_x:  {2}\ttop_y:  {3}\twidth:  {4}\theight:  {5})".format(
-                class_names[cls_id], score * 100.0, x0, y0, x1 - x0, y1 - y0)
+                label, score * 100.0, x0, y0, x1 - x0, y1 - y0)
             )
     if out_img:
         print("save visulization to {}".format(out_img))
