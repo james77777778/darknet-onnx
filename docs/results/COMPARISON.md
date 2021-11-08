@@ -16,7 +16,7 @@ Tested on Ubuntu 18.04 with 1080ti & i7-7800X
 
 |Model|Framework|Time per 1 Image|GPU Mem.|
 |-|-|-|-|
-|YOLOv4|Darknet|34.0ms|1.69GB|
-|YOLOv4|ONNX|36.4ms|1.55GB|
+|YOLOv4|Darknet|19.7ms|1.13GB|
+|YOLOv4|ONNX|20.9ms|1.46GB|
 |YOLOv3|Darknet|17.0ms|1.03GB|
 |YOLOv3|ONNX|16.9ms|1.40GB|
