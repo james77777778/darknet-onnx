@@ -11,8 +11,9 @@ from utils import vis
 
 
 # Use more steps to get more stable inference speed measurement
-WARMUP_STEPS = 0  # 30
-INFERENCE_STEPS = 1  # 30
+WARMUP_STEPS = 30  # 30
+INFERENCE_STEPS = 30  # 30
+PROVIDERS = ['CUDAExecutionProvider']  # CUDAExecutionProvider, CPUExecutionProvider
 
 
 def get_parser():
@@ -81,7 +82,7 @@ def main(args):
     if not args.no_export:
         export_to_onnx(args.cfg, args.weight, args.out, args.batch_size)
     # load ONNX model
-    session = onnxruntime.InferenceSession(args.out)
+    session = onnxruntime.InferenceSession(args.out, providers=PROVIDERS)
     # detect 1 image
     final_boxes, final_scores, final_cls_inds = detect(session, args.img, args.score, args.nms)
     # visualization

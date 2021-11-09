@@ -84,8 +84,8 @@ More visualizations & Inference speed comparison can be found at [docs/results/C
 - torch 1.9.1
 - numpy
 - opencv-python
-- onnx 1.7.0
-- onnxruntime-gpu 1.7.0
+- onnx 1.10.0
+- onnxruntime-gpu 1.9.0
 - onnx-simplifier
 
 ## Usage
