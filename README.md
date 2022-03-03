@@ -45,10 +45,9 @@ More visualizations & Inference speed comparison can be found at [docs/results/C
 
 ## Installation
 - torch 1.9.1+cpu  (>= 1.9.1 for `torch.nn.Mish` activation)
-- numpy
 - opencv-python
-- onnx 1.10.0
 - onnxruntime 1.9.0
+- onnxmltools
 
 ```bash
 # cpu version of torch & onnxruntime
