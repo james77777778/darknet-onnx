@@ -1,7 +1,93 @@
+import os
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from onnxmltools.utils.float16_converter import convert_float_to_float16
+from onnxmltools.utils import load_model, save_model
+
+
+"""
+Export Function
+"""
+
+
+def export_to_onnx(cfgfile, weightfile, outputfile, batch_size=1, to_float16=False):
+    # load model
+    model = Darknet(cfgfile)
+    model.load_weights(weightfile)
+    model.eval()
+    model.fuse()
+
+    # prepare ONNX config
+    input_names = ["input"]
+    output_names = ["output"]
+    dynamic = False
+    dynamic_axes = None
+    if batch_size < 0:
+        dynamic = True
+        dynamic_axes = {"input": {0: "batch_size"}, "output": {0: "batch_size"}}
+    b = -1 if dynamic else batch_size
+    if b < 0:
+        b = 1
+    x = torch.randn((b, 3, model.height, model.width))
+
+    # export the model
+    traced_model = torch.jit.trace(model, x, check_trace=False)
+    f = 'model.pt'
+    torch.jit.save(traced_model, f)
+    loaded_model = torch.jit.load(f)
+    torch.onnx._export(
+        loaded_model,
+        x,
+        outputfile,
+        opset_version=12,
+        input_names=input_names,
+        output_names=output_names,
+        dynamic_axes=dynamic_axes,
+        example_outputs=loaded_model(x),
+    )
+    os.remove(f)
+
+    # export to float16 model
+    if to_float16:
+        onnx_model = load_model(outputfile)
+        half_onnx_model = convert_float_to_float16(onnx_model)
+        save_model(half_onnx_model, outputfile)
+
+    return outputfile
+
+
+"""
+Modules & Darknet Model
+"""
+
+
+def fuse_conv_and_bn(conv, bn):
+    # Fuse convolution and batchnorm layers https://tehnokv.com/posts/fusing-batchnorm-and-conv/
+    fusedconv = (
+        nn.Conv2d(
+            conv.in_channels,
+            conv.out_channels,
+            kernel_size=conv.kernel_size,
+            stride=conv.stride,
+            padding=conv.padding,
+            groups=conv.groups,
+            bias=True,
+        )
+        .requires_grad_(False)
+        .to(conv.weight.device)
+    )
+    # prepare filters
+    w_conv = conv.weight.clone().view(conv.out_channels, -1)
+    w_bn = torch.diag(bn.weight.div(torch.sqrt(bn.eps + bn.running_var)))
+    fusedconv.weight.copy_(torch.mm(w_bn, w_conv).view(fusedconv.weight.size()))
+    # prepare spatial bias
+    b_conv = torch.zeros(conv.weight.size(0), device=conv.weight.device) if conv.bias is None else conv.bias
+    b_bn = bn.bias - bn.weight.mul(bn.running_mean).div(torch.sqrt(bn.running_var + bn.eps))
+    fusedconv.bias.copy_(torch.mm(w_bn, b_conv.reshape(-1, 1)).reshape(-1) + b_bn)
+    return fusedconv
 
 
 def yolo_forward_dynamic(output, num_classes, anchors, num_anchors, scale_x_y, version="yolov4"):
@@ -14,10 +100,10 @@ def yolo_forward_dynamic(output, num_classes, anchors, num_anchors, scale_x_y, v
         begin = i * (5 + num_classes)
         end = (i + 1) * (5 + num_classes)
 
-        bxy_list.append(output[:, begin: begin + 2])
-        bwh_list.append(output[:, begin + 2: begin + 4])
-        det_confs_list.append(output[:, begin + 4: begin + 5])
-        cls_confs_list.append(output[:, begin + 5: end])
+        bxy_list.append(output[:, begin : begin + 2])
+        bwh_list.append(output[:, begin + 2 : begin + 4])
+        det_confs_list.append(output[:, begin + 4 : begin + 5])
+        cls_confs_list.append(output[:, begin + 5 : end])
 
     # Shape: [batch, num_anchors * 2, H, W]
     bxy = torch.cat(bxy_list, dim=1)
@@ -34,7 +120,9 @@ def yolo_forward_dynamic(output, num_classes, anchors, num_anchors, scale_x_y, v
     # Shape: [batch, num_anchors, num_classes, H * W]
     cls_confs = cls_confs.view(output.size(0), num_anchors, num_classes, output.size(2) * output.size(3))
     # Shape: [batch, num_anchors, num_classes, H * W] --> [batch, num_anchors * H * W, num_classes]
-    cls_confs = cls_confs.permute(0, 1, 3, 2).reshape(output.size(0), num_anchors * output.size(2) * output.size(3), num_classes)
+    cls_confs = cls_confs.permute(0, 1, 3, 2).reshape(
+        output.size(0), num_anchors * output.size(2) * output.size(3), num_classes
+    )
 
     # Adopt different decoding method based on
     # https://github.com/WongKinYiu/ScaledYOLOv4/issues/202#issuecomment-810913378
@@ -48,8 +136,18 @@ def yolo_forward_dynamic(output, num_classes, anchors, num_anchors, scale_x_y, v
         bwh = torch.pow(bwh * 2, 2)
 
     # Prepare C-x, C-y, P-w, P-h (None of them are torch related)
-    grid_x = np.expand_dims(np.expand_dims(np.expand_dims(np.linspace(0, output.size(3) - 1, output.size(3)), axis=0).repeat(output.size(2), 0), axis=0), axis=0)
-    grid_y = np.expand_dims(np.expand_dims(np.expand_dims(np.linspace(0, output.size(2) - 1, output.size(2)), axis=1).repeat(output.size(3), 1), axis=0), axis=0)
+    grid_x = np.expand_dims(
+        np.expand_dims(
+            np.expand_dims(np.linspace(0, output.size(3) - 1, output.size(3)), axis=0).repeat(output.size(2), 0), axis=0
+        ),
+        axis=0,
+    )
+    grid_y = np.expand_dims(
+        np.expand_dims(
+            np.expand_dims(np.linspace(0, output.size(2) - 1, output.size(2)), axis=1).repeat(output.size(3), 1), axis=0
+        ),
+        axis=0,
+    )
 
     anchor_w = []
     anchor_h = []
@@ -71,13 +169,13 @@ def yolo_forward_dynamic(output, num_classes, anchors, num_anchors, scale_x_y, v
     for i in range(num_anchors):
         ii = i * 2
         # Shape: [batch, 1, H, W]
-        bx = bxy[:, ii: ii + 1] + torch.FloatTensor(grid_x).to(device)
+        bx = bxy[:, ii : ii + 1] + torch.FloatTensor(grid_x).to(device)
         # Shape: [batch, 1, H, W]
-        by = bxy[:, ii + 1: ii + 2] + torch.FloatTensor(grid_y).to(device)
+        by = bxy[:, ii + 1 : ii + 2] + torch.FloatTensor(grid_y).to(device)
         # Shape: [batch, 1, H, W]
-        bw = bwh[:, ii: ii + 1] * anchor_w[i]
+        bw = bwh[:, ii : ii + 1] * anchor_w[i]
         # Shape: [batch, 1, H, W]
-        bh = bwh[:, ii + 1: ii + 2] * anchor_h[i]
+        bh = bwh[:, ii + 1 : ii + 2] * anchor_h[i]
 
         bx_list.append(bx)
         by_list.append(by)
@@ -144,8 +242,11 @@ class Upsample(nn.Module):
 
 
 class YOLOLayer(nn.Module):
-    ''' [yolo] in darknet cfg'''
-    def __init__(self, anchor_mask=[], anchors=[], num_classes=80, num_anchors=9, stride=32, scale_x_y=1.0, new_coords=1):
+    '''[yolo] in darknet cfg'''
+
+    def __init__(
+        self, anchor_mask=[], anchors=[], num_classes=80, num_anchors=9, stride=32, scale_x_y=1.0, new_coords=1
+    ):
         super(YOLOLayer, self).__init__()
         self.anchor_mask = anchor_mask
         self.num_classes = num_classes
@@ -169,21 +270,23 @@ class YOLOLayer(nn.Module):
         # inference
         masked_anchors = []
         for m in self.anchor_mask:
-            masked_anchors += self.anchors[m * self.anchor_step:(m + 1) * self.anchor_step]
+            masked_anchors += self.anchors[m * self.anchor_step : (m + 1) * self.anchor_step]
         masked_anchors = [anchor / self.stride for anchor in masked_anchors]
-        return yolo_forward_dynamic(x, self.num_classes, masked_anchors, len(self.anchor_mask), self.scale_x_y, self.version)
+        return yolo_forward_dynamic(
+            x, self.num_classes, masked_anchors, len(self.anchor_mask), self.scale_x_y, self.version
+        )
 
 
 class Darknet(nn.Module):
     def __init__(self, cfgfile):
         super(Darknet, self).__init__()
-        self.training = True
+        self.training = False
         self.blocks = self.parse_cfg(cfgfile)
         self.width = int(self.blocks[0]['width'])
         self.height = int(self.blocks[0]['height'])
         self.models = self.create_network(self.blocks)
         self.header = torch.IntTensor([0, 0, 0, 0])
-        self.train(self.training)  # initialize to training mode
+        self.train(self.training)  # initialize to eval mode
 
     def parse_cfg(self, cfgfile):
         blocks = []
@@ -239,7 +342,7 @@ class Darknet(nn.Module):
                         groups = int(block['groups'])
                         group_id = int(block['group_id'])
                         _, b, _, _ = outputs[layers[0]].shape
-                        x = outputs[layers[0]][:, b // groups * group_id:b // groups * (group_id + 1)]
+                        x = outputs[layers[0]][:, b // groups * group_id : b // groups * (group_id + 1)]
                         outputs[ind] = x
                 elif len(layers) == 2:
                     x1 = outputs[layers[0]]
@@ -301,12 +404,15 @@ class Darknet(nn.Module):
                 activation = block['activation']
                 model = nn.Sequential()
                 if batch_normalize:
-                    model.add_module('conv{0}'.format(conv_id),
-                                     nn.Conv2d(prev_filters, filters, kernel_size, stride, pad, bias=False))
+                    model.add_module(
+                        'conv{0}'.format(conv_id),
+                        nn.Conv2d(prev_filters, filters, kernel_size, stride, pad, bias=False),
+                    )
                     model.add_module('bn{0}'.format(conv_id), nn.BatchNorm2d(filters))
                 else:
-                    model.add_module('conv{0}'.format(conv_id),
-                                     nn.Conv2d(prev_filters, filters, kernel_size, stride, pad))
+                    model.add_module(
+                        'conv{0}'.format(conv_id), nn.Conv2d(prev_filters, filters, kernel_size, stride, pad)
+                    )
                 if activation == 'leaky':
                     model.add_module('leaky{0}'.format(conv_id), nn.LeakyReLU(0.1, inplace=True))
                 elif activation == 'relu':
@@ -329,13 +435,10 @@ class Darknet(nn.Module):
                 stride = int(block['stride'])
                 model = nn.Sequential()
                 if pool_size == 2 and stride == 1:
-                    model.add_module(
-                        'zeropad{0}'.format(conv_id),
-                        nn.ZeroPad2d((0, 1, 0, 1))
-                    )
+                    model.add_module('zeropad{0}'.format(conv_id), nn.ZeroPad2d((0, 1, 0, 1)))
                 model.add_module(
                     'maxpool{0}'.format(conv_id),
-                    nn.MaxPool2d(kernel_size=pool_size, stride=stride, padding=(pool_size - 1) // 2)
+                    nn.MaxPool2d(kernel_size=pool_size, stride=stride, padding=(pool_size - 1) // 2),
                 )
                 out_filters.append(prev_filters)
                 prev_stride = stride * prev_stride
@@ -359,7 +462,7 @@ class Darknet(nn.Module):
                         prev_filters = out_filters[layers[0]] // int(block['groups'])
                         prev_stride = out_strides[layers[0]] // int(block['groups'])
                 elif len(layers) > 1:
-                    assert(layers[0] == ind - 1 or layers[1] == ind - 1)
+                    assert layers[0] == ind - 1 or layers[1] == ind - 1
                     prev_filters = sum([out_filters[i] for i in layers])
                     prev_stride = out_strides[layers[0]]
                 else:
@@ -386,7 +489,7 @@ class Darknet(nn.Module):
                     int(block['num']),
                     prev_stride,
                     float(block['scale_x_y']),
-                    int(block['new_coords'])
+                    int(block['new_coords']),
                 )
                 self.num_classes = int(block['classes'])
                 out_filters.append(prev_filters)
@@ -399,24 +502,24 @@ class Darknet(nn.Module):
     def load_conv(self, buf, start, conv_model):
         num_w = conv_model.weight.numel()
         num_b = conv_model.bias.numel()
-        conv_model.bias.data.copy_(torch.from_numpy(buf[start:start + num_b]))
+        conv_model.bias.data.copy_(torch.from_numpy(buf[start : start + num_b]))
         start = start + num_b
-        conv_model.weight.data.copy_(torch.from_numpy(buf[start:start + num_w]).reshape(conv_model.weight.data.shape))
+        conv_model.weight.data.copy_(torch.from_numpy(buf[start : start + num_w]).reshape(conv_model.weight.data.shape))
         start = start + num_w
         return start
 
     def load_conv_bn(self, buf, start, conv_model, bn_model):
         num_w = conv_model.weight.numel()
         num_b = bn_model.bias.numel()
-        bn_model.bias.data.copy_(torch.from_numpy(buf[start:start + num_b]))
+        bn_model.bias.data.copy_(torch.from_numpy(buf[start : start + num_b]))
         start = start + num_b
-        bn_model.weight.data.copy_(torch.from_numpy(buf[start:start + num_b]))
+        bn_model.weight.data.copy_(torch.from_numpy(buf[start : start + num_b]))
         start = start + num_b
-        bn_model.running_mean.copy_(torch.from_numpy(buf[start:start + num_b]))
+        bn_model.running_mean.copy_(torch.from_numpy(buf[start : start + num_b]))
         start = start + num_b
-        bn_model.running_var.copy_(torch.from_numpy(buf[start:start + num_b]))
+        bn_model.running_var.copy_(torch.from_numpy(buf[start : start + num_b]))
         start = start + num_b
-        conv_model.weight.data.copy_(torch.from_numpy(buf[start:start + num_w]).reshape(conv_model.weight.data.shape))
+        conv_model.weight.data.copy_(torch.from_numpy(buf[start : start + num_w]).reshape(conv_model.weight.data.shape))
         start = start + num_w
         return start
 
@@ -455,3 +558,19 @@ class Darknet(nn.Module):
                 pass
             else:
                 print('unknown type %s' % (block['type']))
+
+    def fuse(self):
+        # Fuse Conv2d + BatchNorm2d layers throughout model
+        # print('Fusing layers...')
+        fused_list = nn.ModuleList()
+        for a in list(self.children())[0]:
+            if isinstance(a, nn.Sequential):
+                for i, b in enumerate(a):
+                    if isinstance(b, nn.modules.batchnorm.BatchNorm2d):
+                        # fuse this bn layer with the previous conv2d layer
+                        conv = a[i - 1]
+                        fused = fuse_conv_and_bn(conv, b)
+                        a = nn.Sequential(fused, *list(a.children())[i + 1 :])
+                        break
+            fused_list.append(a)
+        self.module_list = fused_list
