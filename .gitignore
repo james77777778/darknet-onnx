@@ -11,5 +11,6 @@ cfg/yolov4-obj.cfg
 # weights
 weights/*.*
 
-# output model
+# outputs
 *.onnx
+onnx_predictions.jpg

@@ -1,4 +1,9 @@
 # Darknet YOLOv4, YOLOv3 to ONNX
+## To Do
+- [ ] Create Python package
+- [x] (22/03/03) Support FP16 (half precision) conversion (`--to_float16`)
+- [x] (21/11/09) Support YOLOv3, YOLOv4, YOLOv4-csp, YOLOv4-tiny conversion
+
 ## Description
 This project can convert original AlexeyAB/darknet model weights & cfg to ONNX format.  
 
@@ -17,86 +22,55 @@ Other models are not tested but you can try
 
 ### Inference Result
 Use `data/dog.jpg` as the example:
-1. YOLOv4
-    - Darknet
-        ```bash
-        bicycle: 92%    (left_x:  114   top_y:  128     width:  458     height:  299)
-        dog: 98%        (left_x:  129   top_y:  225     width:  184     height:  317)
-        truck: 92%      (left_x:  464   top_y:   77     width:  221     height:   93)
-        pottedplant: 33%        (left_x:  681   top_y:  109     width:   37     height:  45)
-        ```
-    - DarknetONNX
-        ```bash
-        bicycle: 92%  (left_x:  114   top_y:  127     width:  458     height:  299)
-        dog: 98%      (left_x:  128   top_y:  224     width:  185     height:  317)
-        truck: 92%    (left_x:  463   top_y:  76      width:  221     height:  93)
-        pottedplant: 33%        (left_x:  681   top_y:  109     width:  36      height:  45)
-        ```
-    |Framework|Image|
-    |-|-|
-    |darknet|<img src="docs/results/darknet_yolov4_predictions.jpg" alt="drawing" width="75%"/>|  
-    |darknetonnx|<img src="docs/results/onnx_yolov4_predictions.jpg" alt="drawing" width="75%"/>|
-2. YOLOv3
-    - Darknet
-        ```bash
-        bicycle: 99%    (left_x:  117   top_y:  124   width:  452   height:  309)
-        dog: 100%       (left_x:  124   top_y:  224   width:  196   height:  320)
-        truck: 94%      (left_x:  474   top_y:   87   width:  217   height:   79)
-        ```
-    - DarknetONNX
-        ```bash
-        bicycle: 99%    (left_x:  116   top_y:  125     width:  453     height:  307)
-        dog: 100%       (left_x:  122   top_y:  222     width:  197     height:  321)
-        truck: 94%      (left_x:  472   top_y:  87      width:  220     height:  79)
-        ```
-3. YOLOv4-CSP
-    - Darknet
-        ```bash
-        pottedplant: 31%        (left_x:   57   top_y:   71   width:   56   height:   64)
-        bicycle: 94%    (left_x:  128   top_y:  132   width:  440   height:  288)
-        dog: 90%        (left_x:  132   top_y:  221   width:  178   height:  320)
-        truck: 84%      (left_x:  469   top_y:   74   width:  226   height:   97)
-        ```
-    - DarknetONNX
-        ```bash
-        bicycle: 92%    (left_x:  124   top_y:  127     width:  443     height:  293)
-        dog: 91%        (left_x:  131   top_y:  222     width:  179     height:  318)
-        truck: 85%      (left_x:  470   top_y:  75      width:  224     height:  96)
-        ```
-4. YOLOv4-tiny
-    - Darknet
-        ```bash
-        bicycle: 60%    (left_x:   71   top_y:  100   width:  506   height:  379)
-        dog: 84%        (left_x:  137   top_y:  206   width:  181   height:  332)
-        truck: 79%      (left_x:  464   top_y:   80   width:  242   height:   91)
-        car: 46%        (left_x:  473   top_y:   82   width:  225   height:   92)
-        ```
-    - DarknetONNX
-        ```bash
-        bicycle: 61%    (left_x:  71    top_y:  99      width:  505     height:  380)
-        dog: 87%        (left_x:  136   top_y:  205     width:  183     height:  336)
-        truck: 81%      (left_x:  464   top_y:  79      width:  240     height:  91)
-        car: 39%        (left_x:  472   top_y:  81      width:  225     height:  92)
-        ```
+
+YOLOv4
+- Darknet
+    ```bash
+    bicycle: 92%    (left_x:  114   top_y:  128     width:  458     height:  299)
+    dog: 98%        (left_x:  129   top_y:  225     width:  184     height:  317)
+    truck: 92%      (left_x:  464   top_y:   77     width:  221     height:   93)
+    pottedplant: 33%        (left_x:  681   top_y:  109     width:   37     height:  45)
+    ```
+    <img src="docs/results/darknet_yolov4_predictions.jpg" alt="drawing" width="75%"/>
+- DarknetONNX
+    ```bash
+    bicycle: 92%  (left_x:  114   top_y:  127     width:  458     height:  299)
+    dog: 98%      (left_x:  128   top_y:  224     width:  185     height:  317)
+    truck: 92%    (left_x:  463   top_y:  76      width:  221     height:  93)
+    pottedplant: 33%        (left_x:  681   top_y:  109     width:  36      height:  45)
+    ```
+    <img src="docs/results/onnx_yolov4_predictions.jpg" alt="drawing" width="75%"/>
+
 More visualizations & Inference speed comparison can be found at [docs/results/COMPARISON.md](docs/results/COMPARISON.md).  
 
 ## Installation
-- torch 1.9.1
+- torch 1.9.1+cpu  (>= 1.9.1 for `torch.nn.Mish` activation)
 - numpy
 - opencv-python
 - onnx 1.10.0
-- onnxruntime-gpu 1.9.0
-- onnx-simplifier
+- onnxruntime 1.9.0
+
+```bash
+# cpu version of torch & onnxruntime
+pip install -r requirements.txt
+```
 
 ## Usage
+Prepare pretrained model weights or your custom model weights  
+```bash
+mkdir weights
+wget -O weights/yolov3.weights https://pjreddie.com/media/files/yolov3.weights
+wget -O weights/yolov4.weights https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v3_optimal/yolov4.weights
+```
+
 Must specify `--cfg` (`-c`), `--weight` (`-w`) and `--img` (`-i`) for the model conversion.
 ```bash
 # darknet cfg & weights
-python3 main.py --cfg cfg/yolov4.cfg --weight weights/yolov4.weights --img data/dog.jpg --names data/coco.names
 python3 main.py --cfg cfg/yolov3.cfg --weight weights/yolov3.weights --img data/dog.jpg --names data/coco.names
+python3 main.py --cfg cfg/yolov4.cfg --weight weights/yolov4.weights --img data/dog.jpg --names data/coco.names
 python3 main.py --cfg cfg/yolov4-csp.cfg --weight weights/yolov4-csp.weights --img data/dog.jpg --names data/coco.names
 # some custom cfg & weights
-python3 main.py --cfg cfg/yolov4-obj.cfg --weight weights/yolov4-obj.weights --img your/img.jpg --names data/coco.names
+python3 main.py --cfg cfg/yolov4-obj.cfg --weight weights/yolov4-obj.weights --img your.jpg --names your.names
 # show only index if not specify `--names`
 python3 main.py --cfg cfg/yolov4.cfg --weight weights/yolov4.weights --img data/dog.jpg
 ```
