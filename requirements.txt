@@ -1,0 +1,6 @@
+opencv-python
+onnxruntime==1.9.0
+onnxmltools
+
+--find-links https://download.pytorch.org/whl/cpu/torch_stable.html
+torch==1.9.1+cpu
