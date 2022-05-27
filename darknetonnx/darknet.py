@@ -574,3 +574,15 @@ class Darknet(nn.Module):
                         break
             fused_list.append(a)
         self.module_list = fused_list
+
+if __name__ == '__main__':
+     import argparse
+     parser = argparse.ArgumentParser(description="Darknet to ONNX")
+     parser.add_argument("--cfgfile", "-c", type=str, required=True, help="Specify the darknet .cfg file.")
+     parser.add_argument("--weightfile", "-w", type=str, required=True, help="Specify the darknet .weights file.")
+     parser.add_argument("--batch_size", "-b", default=1, type=int, help="If batch size > 0, ONNX model will be static. If batch size < 0, ONNX model will be dynamic. Skip 0")
+     parser.add_argument("--outputfile", "-o", default="model.onnx")
+     parser.add_argument("--to_float16", action='store_true')
+     args = parser.parse_args()
+     export_to_onnx(args.cfgfile, args.weightfile, args.outputfile, args.batch_size, args.to_float16)
+     
