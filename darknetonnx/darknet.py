@@ -4,13 +4,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from onnxmltools.utils.float16_converter import convert_float_to_float16
 from onnxmltools.utils import load_model, save_model
+from onnxmltools.utils.float16_converter import convert_float_to_float16
 
 
-"""
+'''
 Export Function
-"""
+'''
 
 
 def export_to_onnx(cfgfile, weightfile, outputfile, batch_size=1, to_float16=False):
@@ -21,13 +21,13 @@ def export_to_onnx(cfgfile, weightfile, outputfile, batch_size=1, to_float16=Fal
     model.fuse()
 
     # prepare ONNX config
-    input_names = ["input"]
-    output_names = ["output"]
+    input_names = ['input']
+    output_names = ['output']
     dynamic = False
     dynamic_axes = None
     if batch_size < 0:
         dynamic = True
-        dynamic_axes = {"input": {0: "batch_size"}, "output": {0: "batch_size"}}
+        dynamic_axes = {'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}}
     b = -1 if dynamic else batch_size
     if b < 0:
         b = 1
@@ -59,9 +59,9 @@ def export_to_onnx(cfgfile, weightfile, outputfile, batch_size=1, to_float16=Fal
     return outputfile
 
 
-"""
+'''
 Modules & Darknet Model
-"""
+'''
 
 
 def fuse_conv_and_bn(conv, bn):
@@ -90,7 +90,7 @@ def fuse_conv_and_bn(conv, bn):
     return fusedconv
 
 
-def yolo_forward_dynamic(output, num_classes, anchors, num_anchors, scale_x_y, version="yolov4"):
+def yolo_forward_dynamic(output, num_classes, anchors, num_anchors, scale_x_y, version='yolov4'):
     bxy_list = []
     bwh_list = []
     det_confs_list = []
@@ -126,12 +126,12 @@ def yolo_forward_dynamic(output, num_classes, anchors, num_anchors, scale_x_y, v
 
     # Adopt different decoding method based on
     # https://github.com/WongKinYiu/ScaledYOLOv4/issues/202#issuecomment-810913378
-    if version == "yolov4" or version == "yolov3":
+    if version == 'yolov4' or version == 'yolov3':
         bxy = torch.sigmoid(bxy) * scale_x_y - 0.5 * (scale_x_y - 1.0)
         bwh = torch.exp(bwh)
         det_confs = torch.sigmoid(det_confs)
         cls_confs = torch.sigmoid(cls_confs)
-    elif version == "scaled-yolov4":
+    elif version == 'scaled-yolov4':
         bxy = bxy * scale_x_y - 0.5 * (scale_x_y - 1)
         bwh = torch.pow(bwh * 2, 2)
 
@@ -229,9 +229,9 @@ def yolo_forward_dynamic(output, num_classes, anchors, num_anchors, scale_x_y, v
 
 
 class Upsample(nn.Module):
-    """nn.Upsample is deprecated"""
+    '''nn.Upsample is deprecated'''
 
-    def __init__(self, scale_factor, mode="nearest"):
+    def __init__(self, scale_factor, mode='nearest'):
         super(Upsample, self).__init__()
         self.scale_factor = scale_factor
         self.mode = mode
@@ -258,9 +258,9 @@ class YOLOLayer(nn.Module):
         self.new_coords = new_coords
         # parse new_coords
         if self.new_coords == 0:
-            self.version = "yolov4"
+            self.version = 'yolov4'
         elif self.new_coords == 1:
-            self.version = "scaled-yolov4"
+            self.version = 'scaled-yolov4'
 
     def forward(self, x):
         # training
@@ -357,7 +357,7 @@ class Darknet(nn.Module):
                     x = torch.cat((x1, x2, x3, x4), 1)
                     outputs[ind] = x
                 else:
-                    print("rounte number > 2 ,is {}".format(len(layers)))
+                    print('rounte number > 2 ,is {}'.format(len(layers)))
 
             elif block['type'] == 'shortcut':
                 from_layer = int(block['from'])
@@ -424,7 +424,7 @@ class Darknet(nn.Module):
                 elif activation == 'linear':
                     model.add_module('linear{0}'.format(conv_id), nn.Identity())
                 else:
-                    print("convolution has no activation: {}".format(activation))
+                    print('convolution has no activation: {}'.format(activation))
                 prev_filters = filters
                 out_filters.append(prev_filters)
                 prev_stride = stride * prev_stride
@@ -449,7 +449,7 @@ class Darknet(nn.Module):
                 out_filters.append(prev_filters)
                 prev_stride = prev_stride // stride
                 out_strides.append(prev_stride)
-                models.append(Upsample(scale_factor=stride, mode="nearest"))
+                models.append(Upsample(scale_factor=stride, mode='nearest'))
             elif block['type'] == 'route':
                 layers = block['layers'].split(',')
                 ind = len(models)
@@ -466,7 +466,7 @@ class Darknet(nn.Module):
                     prev_filters = sum([out_filters[i] for i in layers])
                     prev_stride = out_strides[layers[0]]
                 else:
-                    print("route error!!!")
+                    print('route error!!!')
                 out_filters.append(prev_filters)
                 out_strides.append(prev_stride)
                 models.append(nn.Identity())
@@ -574,3 +574,22 @@ class Darknet(nn.Module):
                         break
             fused_list.append(a)
         self.module_list = fused_list
+
+
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Darknet to ONNX')
+    parser.add_argument('--cfg', '-c', type=str, required=True, help='Darknet .cfg file')
+    parser.add_argument('--weight', '-w', type=str, required=True, help='Darknet .weights file')
+    parser.add_argument(
+        '--batch-size',
+        '-b',
+        default=1,
+        type=int,
+        help='If batch size > 0, ONNX model will be static. If batch size < 0, ONNX model will be dynamic. Skip 0',
+    )
+    parser.add_argument('--out', '-o', default='model.onnx', help='Output file path')
+    parser.add_argument('--to-float16', action='store_true', help='Use onnxmltools to convert to float16 model')
+    args = parser.parse_args()
+    export_to_onnx(args.cfg, args.weight, args.out, args.batch_size, args.to_float16)

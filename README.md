@@ -55,25 +55,41 @@ pip install -r requirements.txt
 ```
 
 ## Usage
-Prepare pretrained model weights or your custom model weights  
-```bash
-mkdir weights
-wget -O weights/yolov3.weights https://pjreddie.com/media/files/yolov3.weights
-wget -O weights/yolov4.weights https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v3_optimal/yolov4.weights
-```
+1. Prepare pretrained model weights or your custom model weights  
+    ```bash
+    mkdir weights
+    wget -O weights/yolov3.weights https://pjreddie.com/media/files/yolov3.weights
+    wget -O weights/yolov4.weights https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v3_optimal/yolov4.weights
+    ```
+2. Convert Darknet model
+    - Convert and visualize the result:
+        ```bash
+        # help
+        python3 main.py -h
+        
+        # darknet cfg & weights
+        python3 main.py --cfg cfg/yolov3.cfg --weight weights/yolov3.weights --img data/dog.jpg --names data/coco.names
+        python3 main.py --cfg cfg/yolov4.cfg --weight weights/yolov4.weights --img data/dog.jpg --names data/coco.names
+        python3 main.py --cfg cfg/yolov4-csp.cfg --weight weights/yolov4-csp.weights --img data/dog.jpg --names data/coco.names
+        
+        # custom cfg & weights
+        python3 main.py --cfg cfg/yolov4-obj.cfg --weight weights/yolov4-obj.weights --img your.jpg --names your.names
+        
+        # it will show index if not specifying `--names`
+        python3 main.py --cfg cfg/yolov4.cfg --weight weights/yolov4.weights --img data/dog.jpg
+        ```
+        Outputs `model.onnx` and `onnx_predictions.jpg`.
+    - Only convert the model (use standalone `darknetonnx.darknet`)
+        ```bash
+        # help
+        python3 -m darknetonnx.darknet -h
 
-Must specify `--cfg` (`-c`), `--weight` (`-w`) and `--img` (`-i`) for the model conversion.
-```bash
-# darknet cfg & weights
-python3 main.py --cfg cfg/yolov3.cfg --weight weights/yolov3.weights --img data/dog.jpg --names data/coco.names
-python3 main.py --cfg cfg/yolov4.cfg --weight weights/yolov4.weights --img data/dog.jpg --names data/coco.names
-python3 main.py --cfg cfg/yolov4-csp.cfg --weight weights/yolov4-csp.weights --img data/dog.jpg --names data/coco.names
-# some custom cfg & weights
-python3 main.py --cfg cfg/yolov4-obj.cfg --weight weights/yolov4-obj.weights --img your.jpg --names your.names
-# show only index if not specify `--names`
-python3 main.py --cfg cfg/yolov4.cfg --weight weights/yolov4.weights --img data/dog.jpg
-```
-The script outputs `model.onnx` and `onnx_predictions.jpg`.
+        # darknet yolov3
+        python3 -m darknetonnx.darknet --cfg cfg/yolov3.cfg --weight weights/yolov3.weights
+
+        # darknet yolov3 with float16
+        python3 -m darknetonnx.darknet --cfg cfg/yolov3.cfg --weight weights/yolov3.weights --to-float16
+        ```
 
 ## YOLO Spec.
 ### `mask` in `[yolo]`
