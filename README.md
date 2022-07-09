@@ -44,13 +44,13 @@ YOLOv4
 More visualizations & Inference speed comparison can be found at [docs/results/COMPARISON.md](docs/results/COMPARISON.md).  
 
 ## Installation
-- torch 1.9.1+cpu  (>= 1.9.1 for `torch.nn.Mish` activation)
+- torch >= 1.9.1 (>= 1.9.1 for `torch.nn.Mish` activation)
 - opencv-python
 - onnxruntime 1.9.0
-- onnxmltools
+- onnxmltools 1.10.0
+- packaging
 
 ```bash
-# cpu version of torch & onnxruntime
 pip install -r requirements.txt
 ```
 
@@ -103,3 +103,9 @@ https://github.com/WongKinYiu/ScaledYOLOv4/issues/202#issuecomment-810913378
 - https://github.com/AlexeyAB/darknet
 - https://github.com/Tianxiaomo/pytorch-YOLOv4
 - https://github.com/Megvii-BaseDetection/YOLOX
+
+## Q&A
+### `TypeError: export() got an unexpected keyword argument 'example_outputs'`
+`torch.onnx._export` has changed their api and deprecate the keyword argument `example_outputs` with `torch` version >= 1.11.0.
+
+The newest version of this repository has fixed the issue.
