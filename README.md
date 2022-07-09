@@ -106,6 +106,6 @@ https://github.com/WongKinYiu/ScaledYOLOv4/issues/202#issuecomment-810913378
 
 ## Q&A
 ### `TypeError: export() got an unexpected keyword argument 'example_outputs'`
-`torch.onnx._export` has changed their api and deprecate the keyword argument `example_outputs` with `torch` version >= 1.11.0.
+`torch.onnx._export` has deprecated the keyword argument `example_outputs` with `torch > 1.10.1`.
 
 The newest version of this repository has fixed the issue.
