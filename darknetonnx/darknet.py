@@ -1,4 +1,5 @@
 import os
+from packaging import version
 
 import numpy as np
 import torch
@@ -38,16 +39,31 @@ def export_to_onnx(cfgfile, weightfile, outputfile, batch_size=1, to_float16=Fal
     f = 'model.pt'
     torch.jit.save(traced_model, f)
     loaded_model = torch.jit.load(f)
-    torch.onnx._export(
-        loaded_model,
-        x,
-        outputfile,
-        opset_version=12,
-        input_names=input_names,
-        output_names=output_names,
-        dynamic_axes=dynamic_axes,
-        example_outputs=loaded_model(x),
-    )
+
+    # for torch compatibility (torch.onnx._export)
+    if version.parse(torch.__version__) < version.parse('1.9.1'):
+        raise NotImplementedError(f'the torch version should be >= 1.9.1 and got: {torch.__version__}')
+    elif version.parse(torch.__version__) <= version.parse('1.10.1'):
+        torch.onnx._export(
+            loaded_model,
+            x,
+            outputfile,
+            opset_version=12,
+            input_names=input_names,
+            output_names=output_names,
+            dynamic_axes=dynamic_axes,
+            example_outputs=loaded_model(x),
+        )
+    else:
+        torch.onnx._export(
+            loaded_model,
+            x,
+            outputfile,
+            opset_version=12,
+            input_names=input_names,
+            output_names=output_names,
+            dynamic_axes=dynamic_axes,
+        )
     os.remove(f)
 
     # export to float16 model
