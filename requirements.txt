@@ -1,8 +1,7 @@
-protobuf==3.20.1
-opencv-python==4.5.5.64
-onnxruntime==1.9.0
-onnxmltools==1.10.0
-packaging==21.3
+opencv-python
+packaging
+onnxruntime>=1.9.0
+onnxmltools>=1.10.0
 
 --find-links https://download.pytorch.org/whl/cpu/torch_stable.html
 torch>=1.9.1+cpu

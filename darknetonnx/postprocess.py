@@ -1,6 +1,5 @@
 import numpy as np
 
-
 """
 nms & multiclass_nms_class_aware are borrowed from YOLOX
 https://github.com/Megvii-BaseDetection/YOLOX/blob/main/demo/ONNXRuntime/onnx_inference.py
@@ -47,7 +46,9 @@ def multiclass_nms_class_aware(boxes, scores, nms_thr, score_thr):
             keep = nms(valid_boxes, valid_scores, nms_thr)
             if len(keep) > 0:
                 cls_inds = np.ones((len(keep), 1)) * cls_ind
-                dets = np.concatenate([valid_boxes[keep], valid_scores[keep, None], cls_inds], 1)
+                dets = np.concatenate(
+                    [valid_boxes[keep], valid_scores[keep, None], cls_inds], 1
+                )
                 final_dets.append(dets)
     if len(final_dets) == 0:
         return None
@@ -57,9 +58,13 @@ def multiclass_nms_class_aware(boxes, scores, nms_thr, score_thr):
 def get_detections(predictions, score_thresh=0.5, nms_thresh=0.45):
     boxes = predictions[:, :4]
     scores = predictions[:, 4:]
-    dets = multiclass_nms_class_aware(boxes, scores, nms_thr=nms_thresh, score_thr=score_thresh)
+    dets = multiclass_nms_class_aware(
+        boxes, scores, nms_thr=nms_thresh, score_thr=score_thresh
+    )
     if dets is not None:
-        final_boxes, final_scores, final_cls_inds = dets[:, :4], dets[:, 4], dets[:, 5]
+        final_boxes = dets[:, :4]
+        final_scores = dets[:, 4]
+        final_cls_inds = dets[:, 5]
         return final_boxes, final_scores, final_cls_inds
     else:
         return None, None, None
